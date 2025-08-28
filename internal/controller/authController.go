@@ -4,11 +4,9 @@ import(
 	"time"
 	"fmt"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/go-ldap/ldap/v3"
 	"go.mongodb.org/mongo-driver/v2/bson"
-
 	"BackendFramework/internal/config"
 	"BackendFramework/internal/middleware"
 	"BackendFramework/internal/service"
@@ -34,6 +32,7 @@ func Register(c *gin.Context) {
 		LastName            string `json:"lastName" binding:"required"`
 		Email               string `json:"email" binding:"required"`
 		Phone               string `json:"phone" binding:"required"`
+		Address             string `json:"address" binding:"required"` 
 		Password            string `json:"password" binding:"required"`
 		ConfirmPassword     string `json:"confirmPassword" binding:"required"`
 		Group               int    `json:"group"`
@@ -54,7 +53,7 @@ func Register(c *gin.Context) {
 
 	fmt.Printf("Request body parsed successfully: %+v\n", registerBody)
 
-	// Validate password confirmation
+
 	if registerBody.Password != registerBody.ConfirmPassword {
 		fmt.Printf("Password mismatch\n")
 		c.JSON(http.StatusOK, gin.H{
@@ -66,10 +65,10 @@ func Register(c *gin.Context) {
 
 	fmt.Printf("Password validation passed\n")
 
-	// Step 1: Test database check operations first
+	
 	fmt.Printf("Testing database check operations...\n")
 	
-	// Check if user already exists by username - wrapped in error handling
+
 	fmt.Printf("Checking existing user by username\n")
 	existingUser := service.GetOneUserByUsername(registerBody.Username)
 	if existingUser != nil {
@@ -82,7 +81,7 @@ func Register(c *gin.Context) {
 	}
 	fmt.Printf("Username check passed\n")
 
-	// Check if email already exists
+	
 	fmt.Printf("Checking existing user by email\n")
 	existingUserByEmail := service.GetOneUserByUsername(registerBody.Email)
 	if existingUserByEmail != nil {
@@ -95,20 +94,19 @@ func Register(c *gin.Context) {
 	}
 	fmt.Printf("Email check passed\n")
 
-	// Set default group if not provided
 	if registerBody.Group == 0 {
 		registerBody.Group = 1
 	}
 
 	fmt.Printf("Creating user data\n")
 	
-	// Create new user data matching your User struct
 	userData := bson.M{
 		"username":             registerBody.Username,
 		"firstName":            registerBody.FirstName,
 		"lastName":             registerBody.LastName,
 		"email":                registerBody.Email,
 		"phone":                registerBody.Phone,
+		"address":              registerBody.Address, 
 		"password":             registerBody.Password,
 		"group":                registerBody.Group,
 		"isAktif":              "active",
@@ -122,8 +120,6 @@ func Register(c *gin.Context) {
 
 	fmt.Printf("Calling CreateUser service\n")
 
-	// Temporary: Check if CreateUser function exists and works
-	// If service.CreateUser doesn't exist or has issues, this will prevent panic
 	var success bool
 	func() {
 		defer func() {

@@ -6,14 +6,14 @@ import (
 
 	"BackendFramework/internal/model"
 	"BackendFramework/internal/service"
-
+	"golang.org/x/crypto/bcrypt"
 	"github.com/gin-gonic/gin"
 )
 
-// Users by Group functions
+
 
 func GetUsersByGroup(c *gin.Context) {
-	// Get group parameter from query
+	
 	group := c.Query("group")
 	if group == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -24,7 +24,6 @@ func GetUsersByGroup(c *gin.Context) {
 		return
 	}
 
-	// Call service to get users by group
 	users := service.GetUsersByGroup(group)
 	if users == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -230,6 +229,16 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// Validasi input (pakai helper)
+	if err := validateRegisterInput(&registerInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "Validation failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
 	// Validasi password confirmation
 	if registerInput.Password != registerInput.ConfirmPassword {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -240,6 +249,18 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// Hash password pakai bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerInput.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    http.StatusInternalServerError,
+			"message": "Failed to hash password",
+			"error":   err.Error(),
+		})
+		return
+	}
+	registerInput.Password = string(hashedPassword)
+
 	// Panggil service untuk register user
 	status, err := service.InsertUserFromRegister(&registerInput)
 	if !status {
@@ -247,7 +268,7 @@ func RegisterUser(c *gin.Context) {
 		if err != nil {
 			errorMsg = err.Error()
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    http.StatusInternalServerError,
 			"message": "User registration failed",
@@ -261,12 +282,13 @@ func RegisterUser(c *gin.Context) {
 		"code":    http.StatusCreated,
 		"message": "User registration completed successfully",
 		"data": gin.H{
+			"userId":   registerInput.Username, 
 			"username": registerInput.Username,
 			"email":    registerInput.Email,
-			"userId":   registerInput.Username, // untuk compatibility dengan response lama
 		},
 	})
 }
+
 
 func UpdateUser(c *gin.Context) {
 	usrId := c.Param("usrId")

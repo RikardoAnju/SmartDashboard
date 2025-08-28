@@ -22,6 +22,7 @@ class _AddUserPageState extends State<AddUserPage> {
     'username': TextEditingController(),
     'firstName': TextEditingController(),
     'lastName': TextEditingController(),
+    'address' : TextEditingController(),
     'email': TextEditingController(),
     'phone': TextEditingController(),
     'password': TextEditingController(),
@@ -70,8 +71,8 @@ class _AddUserPageState extends State<AddUserPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Clean and validate all input data
       final username = _controllers['username']!.text.trim();
+      final address = _controllers['address']!.text.trim();
       final firstName = _controllers['firstName']!.text.trim();
       final lastName = _controllers['lastName']!.text.trim();
       final email = _controllers['email']!.text.trim();
@@ -79,10 +80,10 @@ class _AddUserPageState extends State<AddUserPage> {
       final password = _controllers['password']!.text;
       final confirmPassword = _controllers['confirmPassword']!.text;
 
-     
       final requestBody = <String, dynamic>{
         "username": username,
         "firstName": firstName,
+        "address": address,
         "lastName": lastName,
         "email": email,
         "phone": phone,
@@ -93,7 +94,6 @@ class _AddUserPageState extends State<AddUserPage> {
         "agreeTerms": true,
       };
 
-      // Debug print to check JSON structure
       print('Request body: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
@@ -112,30 +112,28 @@ class _AddUserPageState extends State<AddUserPage> {
         try {
           final responseData = jsonDecode(response.body);
           _showSnackBar(
-            responseData['message'] ?? 'User created successfully',
+            responseData['message'] ?? 'Berhasil Menambahkan Karyawan',
             Colors.green,
           );
         } catch (e) {
-          // If response body is not JSON, show generic success message
           _showSnackBar('User created successfully', Colors.green);
         }
-        
-        // Clear form after successful submission
         _clearForm();
       } else {
         String errorMessage = 'Failed to create user';
         try {
           final errorData = jsonDecode(response.body);
-          errorMessage = errorData['error'] ?? errorData['message'] ?? errorMessage;
+          errorMessage =
+              errorData['error'] ?? errorData['message'] ?? errorMessage;
         } catch (e) {
-          // If error response is not JSON, use status code
           errorMessage = 'Server error: ${response.statusCode}';
         }
         throw Exception(errorMessage);
       }
     } catch (e) {
       print('Error details: $e');
-      _showSnackBar('Error: ${e.toString().replaceFirst('Exception: ', '')}', Colors.red);
+      _showSnackBar(
+          'Error: ${e.toString().replaceFirst('Exception: ', '')}', Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -159,18 +157,13 @@ class _AddUserPageState extends State<AddUserPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     
-      
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // Header Card
               _buildHeader(),
               const SizedBox(height: 24),
-              
-              // Form Card
               _buildFormCard(),
             ],
           ),
@@ -202,11 +195,11 @@ class _AddUserPageState extends State<AddUserPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Create New User',
+                'Tambah Karyawan',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               Text(
-                'Fill in the details to add a new user',
+                'Isi Detail Karyawan',
                 style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
               ),
             ],
@@ -237,26 +230,24 @@ class _AddUserPageState extends State<AddUserPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'User Information',
+              'Informasi Karyawan',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            
-            // Username field
+
             _buildTextField(
               'username',
-              'Username',
+              'Username Karyawan',
               Icons.person_outline,
               validator: (v) => _validateField(v, 'Username', minLength: 3),
             ),
-            
-            // First Name and Last Name row
+
             Row(
               children: [
                 Expanded(
                   child: _buildTextField(
                     'firstName',
-                    'First Name',
+                    'Nama Depan',
                     Icons.badge_outlined,
                     validator: (v) => _validateField(v, 'First Name'),
                   ),
@@ -265,15 +256,14 @@ class _AddUserPageState extends State<AddUserPage> {
                 Expanded(
                   child: _buildTextField(
                     'lastName',
-                    'Last Name',
+                    'Nama Belakang',
                     Icons.badge_outlined,
                     validator: (v) => _validateField(v, 'Last Name'),
                   ),
                 ),
               ],
             ),
-            
-            // Email field
+
             _buildTextField(
               'email',
               'Email',
@@ -281,17 +271,21 @@ class _AddUserPageState extends State<AddUserPage> {
               keyboardType: TextInputType.emailAddress,
               validator: _validateEmail,
             ),
-            
-            // Phone field
+            _buildTextField(
+              'address',
+              'Address',
+              Icons.home_outlined,
+              validator: (v) => _validateField(v, 'Address', minLength: 7),
+            ),
+
             _buildTextField(
               'phone',
-              'Phone',
+              'Nomor Hp',
               Icons.phone_outlined,
               keyboardType: TextInputType.phone,
               validator: (v) => _validateField(v, 'Phone', minLength: 10),
             ),
-            
-            // Password field
+
             _buildTextField(
               'password',
               'Password',
@@ -299,25 +293,28 @@ class _AddUserPageState extends State<AddUserPage> {
               obscureText: _obscurePassword,
               validator: (v) => _validateField(v, 'Password', minLength: 8),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                    _obscurePassword ? Icons.visibility : Icons.visibility_off),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
-            
-            // Confirm Password field
+
             _buildTextField(
               'confirmPassword',
-              'Confirm Password',
+              'Konfirmasi Password',
               Icons.lock_outline,
               obscureText: _obscureConfirmPassword,
               validator: _validateConfirmPassword,
               suffixIcon: IconButton(
-                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                icon: Icon(_obscureConfirmPassword
+                    ? Icons.visibility
+                    : Icons.visibility_off),
+                onPressed: () => setState(
+                    () => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
             ),
-            
-            // Group and Status row
+
             Row(
               children: [
                 Expanded(
@@ -343,10 +340,9 @@ class _AddUserPageState extends State<AddUserPage> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 32),
-            
-            // Submit button
+
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -369,7 +365,7 @@ class _AddUserPageState extends State<AddUserPage> {
                         ),
                       )
                     : const Text(
-                        'Create User',
+                        'Tambah Karyawan',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -377,10 +373,9 @@ class _AddUserPageState extends State<AddUserPage> {
                       ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Reset button
+
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -394,7 +389,7 @@ class _AddUserPageState extends State<AddUserPage> {
                   ),
                 ),
                 child: const Text(
-                  'Reset Form',
+                  'Reset Halaman',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -420,7 +415,7 @@ class _AddUserPageState extends State<AddUserPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
-        controller: _controllers[key]!,
+        controller: _controllers[key],
         keyboardType: keyboardType,
         obscureText: obscureText,
         validator: validator,

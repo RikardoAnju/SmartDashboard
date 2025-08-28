@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'add_user_page.dart';
-import 'daftarUser_page.dart';
+import 'KelolahKaryawan.dart';
 import 'analytics_page.dart';
 import 'profile_page.dart';
 import 'list_outlet.dart';
@@ -29,7 +30,7 @@ class _AdminPageState extends State<Adminpage>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -38,28 +39,41 @@ class _AdminPageState extends State<Adminpage>
     _pages = [
       DashboardPage(userEmail: widget.userEmail, userData: widget.userData),
       AddUserPage(userEmail: widget.userEmail, userData: widget.userData),
-      TasksPage(userEmail: widget.userEmail, userData: widget.userData),
+      KelolahKaryawanPage(
+        userEmail: widget.userEmail,
+        userData: widget.userData,
+      ),
       AnalyticsPage(userEmail: widget.userEmail, userData: widget.userData),
       OutletListPage(userEmail: widget.userEmail, userData: widget.userData),
       ProfilePage(userEmail: widget.userEmail, userData: widget.userData),
     ];
 
-    // Menambahkan Dashboard sebagai item navigasi pertama
     _navigationItems = [
       NavigationItem(icon: Icons.dashboard, label: 'Dashboard', index: 0),
-      NavigationItem(icon: Icons.person_add, label: 'Add User', index: 1),
-      NavigationItem(icon: Icons.task, label: 'Daftar User', index: 2),
+      NavigationItem(
+        icon: Icons.person_add,
+        label: 'Tambah Karyawan',
+        index: 1,
+      ),
+      NavigationItem(
+        icon: Icons.group,
+        label: 'Pengelolahan Karyawan',
+        index: 2,
+      ),
       NavigationItem(icon: Icons.analytics, label: 'Analytics', index: 3),
       NavigationItem(icon: Icons.store, label: 'Inventory', index: 4),
-      NavigationItem(icon: Icons.work, label: 'Workshop', index: 4),
-      NavigationItem(icon: Icons.confirmation_num, label: 'Voucer', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Promo', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Pengelolahan Karyawan', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Penggajian', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Pelanggan', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Transaksi', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Invoice', index: 4),
-      NavigationItem(icon: Icons.store, label: 'Cara Penggunaan', index: 4),
+      NavigationItem(icon: Icons.work, label: 'Workshop', index: 5),
+      NavigationItem(icon: Icons.confirmation_num, label: 'Voucer', index: 6),
+      NavigationItem(icon: Icons.local_offer, label: 'Promo', index: 7),
+      NavigationItem(icon: Icons.attach_money, label: 'Penggajian', index: 8),
+      NavigationItem(icon: Icons.person, label: 'Pelanggan', index: 9),
+      NavigationItem(icon: Icons.receipt_long, label: 'Transaksi', index: 10),
+      NavigationItem(icon: Icons.description, label: 'Invoice', index: 11),
+      NavigationItem(
+        icon: Icons.menu_book,
+        label: 'Cara Penggunaan',
+        index: 12,
+      ),
     ];
   }
 
@@ -86,9 +100,11 @@ class _AdminPageState extends State<Adminpage>
     });
   }
 
-  void _handleLogout() {
+  // 🔧 FUNGSI LOGOUT YANG DIPERBAIKI
+  void _handleLogout() async {
     showDialog(
       context: context,
+      barrierDismissible: false, // Mencegah dialog ditutup secara tidak sengaja
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Konfirmasi Logout'),
@@ -99,12 +115,103 @@ class _AdminPageState extends State<Adminpage>
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Tutup dialog terlebih dahulu
+                
+                // Tampilkan loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
                 );
+
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+
+                  // Debug: Print token sebelum dihapus
+                  print("AccessToken sebelum logout: ${prefs.getString("accessToken")}");
+                  print("RefreshToken sebelum logout: ${prefs.getString("refreshToken")}");
+                  print("UserId sebelum logout: ${prefs.getString("userId")}");
+
+                  // Hapus semua token dan data sesi pengguna
+                  final List<String> keysToRemove = [
+                    "accessToken",
+                    "refreshToken", 
+                    "userId",
+                    "userEmail",
+                    "userName",
+                    "userRole",
+                    "isLoggedIn",
+                    "userData",
+                    "loginTime",
+                    "lastActivity",
+                    "deviceId",
+                  ];
+
+                  // Hapus satu per satu untuk memastikan
+                  for (String key in keysToRemove) {
+                    if (prefs.containsKey(key)) {
+                      await prefs.remove(key);
+                      print("✅ Removed key: $key");
+                    }
+                  }
+
+                  // Verifikasi token sudah terhapus
+                  print("AccessToken setelah logout: ${prefs.getString("accessToken")}");
+                  print("RefreshToken setelah logout: ${prefs.getString("refreshToken")}");
+                  print("UserId setelah logout: ${prefs.getString("userId")}");
+
+                  // Tutup loading dialog
+                  if (mounted) Navigator.of(context).pop();
+
+                  // Navigasi ke halaman login dan hapus semua rute sebelumnya
+                  if (mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (Route<dynamic> route) => false, // Hapus semua rute
+                    );
+                  }
+
+                  // Tampilkan pesan berhasil logout
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Berhasil logout'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+
+                } catch (e) {
+                  // Tutup loading dialog jika error
+                  if (mounted) Navigator.of(context).pop();
+                  
+                  // Tampilkan error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error saat logout: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                  
+                  // Tetap navigasi ke login meskipun ada error
+                  if (mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (Route<dynamic> route) => false,
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -116,6 +223,56 @@ class _AdminPageState extends State<Adminpage>
         );
       },
     );
+  }
+
+  // 🔧 FUNGSI HELPER UNTUK MEMBERSIHKAN DATA USER
+  Future<void> _clearAllUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Daftar lengkap key yang mungkin disimpan
+      final List<String> userDataKeys = [
+        "accessToken",
+        "refreshToken", 
+        "userId",
+        "userEmail",
+        "userName",
+        "userRole",
+        "isLoggedIn",
+        "userData",
+        "loginTime",
+        "lastActivity",
+        "deviceId",
+        // Tambahkan key lain sesuai kebutuhan aplikasi
+      ];
+
+      // Hapus semua key terkait user
+      for (String key in userDataKeys) {
+        if (prefs.containsKey(key)) {
+          await prefs.remove(key);
+          print("Removed key: $key");
+        }
+      }
+
+      // Verifikasi pembersihan berhasil
+      bool allCleared = true;
+      for (String key in userDataKeys) {
+        if (prefs.containsKey(key)) {
+          allCleared = false;
+          print("Warning: Key '$key' masih ada setelah pembersihan");
+        }
+      }
+
+      if (allCleared) {
+        print("✅ Semua data user berhasil dibersihkan");
+      } else {
+        print("⚠️  Beberapa data mungkin belum terhapus sepenuhnya");
+      }
+
+    } catch (e) {
+      print("❌ Error saat membersihkan data user: $e");
+      throw e;
+    }
   }
 
   String _getGreeting() {
@@ -138,12 +295,12 @@ class _AdminPageState extends State<Adminpage>
       child: Column(
         children: [
           // Header dengan logo dan title
-          if (_isExpanded) 
+          if (_isExpanded)
             Row(
               children: [
                 // Logo
                 Image.asset(
-                  'assets/img/logo.png', 
+                  'assets/img/logo.png',
                   height: 32,
                   width: 32,
                   fit: BoxFit.contain,
@@ -180,10 +337,10 @@ class _AdminPageState extends State<Adminpage>
 
   Widget _buildNavigationItem(NavigationItem item) {
     final isSelected = _selectedIndex == item.index;
-    
+
     return Container(
       margin: EdgeInsets.symmetric(
-        horizontal: _isExpanded ? 8 : 4, 
+        horizontal: _isExpanded ? 8 : 4,
         vertical: 2,
       ),
       child: Material(
@@ -208,8 +365,8 @@ class _AdminPageState extends State<Adminpage>
                     children: [
                       Icon(
                         item.icon,
-                        color: isSelected 
-                            ? const Color(0xFF3B82F6) 
+                        color: isSelected
+                            ? const Color(0xFF3B82F6)
                             : const Color(0xFF6B7280),
                         size: 24,
                       ),
@@ -218,8 +375,8 @@ class _AdminPageState extends State<Adminpage>
                         child: Text(
                           item.label,
                           style: TextStyle(
-                            color: isSelected 
-                                ? const Color(0xFF3B82F6) 
+                            color: isSelected
+                                ? const Color(0xFF3B82F6)
                                 : const Color(0xFF374151),
                             fontSize: 16,
                             fontWeight: isSelected
@@ -234,8 +391,8 @@ class _AdminPageState extends State<Adminpage>
                 : Center(
                     child: Icon(
                       item.icon,
-                      color: isSelected 
-                          ? const Color(0xFF3B82F6) 
+                      color: isSelected
+                          ? const Color(0xFF3B82F6)
                           : const Color(0xFF6B7280),
                       size: 20,
                     ),
@@ -316,15 +473,19 @@ class _AdminPageState extends State<Adminpage>
                         onSelected: (value) {
                           switch (value) {
                             case 'profile':
-                              setState(() => _selectedIndex = 5); // Profile index
+                              setState(
+                                () => _selectedIndex = 5,
+                              ); // Profile index
                               break;
                             case 'logout':
-                              _handleLogout();
+                              _handleLogout(); // 🔧 Menggunakan fungsi logout yang diperbaiki
                               break;
                             case 'settings':
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Settings feature coming soon!'),
+                                  content: Text(
+                                    'Settings feature coming soon!',
+                                  ),
                                 ),
                               );
                               break;
@@ -351,15 +512,25 @@ class _AdminPageState extends State<Adminpage>
                           const PopupMenuItem(
                             value: 'logout',
                             child: ListTile(
-                              leading: Icon(Icons.logout, color: Color(0xFFEF4444)),
-                              title: Text('Logout', style: TextStyle(color: Color(0xFFEF4444))),
+                              leading: Icon(
+                                Icons.logout,
+                                color: Color(0xFFEF4444),
+                              ),
+                              title: Text(
+                                'Logout',
+                                style: TextStyle(color: Color(0xFFEF4444)),
+                              ),
                               contentPadding: EdgeInsets.zero,
                             ),
                           ),
                         ],
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: const Icon(Icons.person, color: Colors.white, size: 24),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ],
@@ -399,7 +570,11 @@ class DashboardContentPage extends StatefulWidget {
   final String userEmail;
   final Map<String, dynamic>? userData;
 
-  const DashboardContentPage({super.key, required this.userEmail, this.userData});
+  const DashboardContentPage({
+    super.key,
+    required this.userEmail,
+    this.userData,
+  });
 
   @override
   State<DashboardContentPage> createState() => _DashboardContentPageState();
@@ -408,12 +583,22 @@ class DashboardContentPage extends StatefulWidget {
 class _DashboardContentPageState extends State<DashboardContentPage> {
   String selectedMonth = 'January';
   String selectedYear = '2021';
-  
+
   final List<String> months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
-  
+
   final List<String> years = ['2020', '2021', '2022', '2023', '2024', '2025'];
 
   // Sample dashboard data
@@ -473,9 +658,21 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
           Expanded(
             child: Row(
               children: [
-                Expanded(child: _buildDropdown(selectedMonth, months, (value) => setState(() => selectedMonth = value!))),
+                Expanded(
+                  child: _buildDropdown(
+                    selectedMonth,
+                    months,
+                    (value) => setState(() => selectedMonth = value!),
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildDropdown(selectedYear, years, (value) => setState(() => selectedYear = value!))),
+                Expanded(
+                  child: _buildDropdown(
+                    selectedYear,
+                    years,
+                    (value) => setState(() => selectedYear = value!),
+                  ),
+                ),
                 const SizedBox(width: 16),
                 const Expanded(
                   child: Text(
@@ -492,7 +689,11 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
     );
   }
 
-  Widget _buildDropdown(String value, List<String> items, void Function(String?) onChanged) {
+  Widget _buildDropdown(
+    String value,
+    List<String> items,
+    void Function(String?) onChanged,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -503,7 +704,9 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+          items: items
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .toList(),
           onChanged: onChanged,
         ),
       ),
@@ -536,14 +739,57 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
 
   Widget _buildStatsGrid() {
     final stats = [
-      StatItem('Omset', dashboardData['omset'], Colors.orange, Icons.trending_up),
-      StatItem('Uang Masuk', dashboardData['uangMasuk'], Colors.brown, Icons.account_balance_wallet),
-      StatItem('Pengeluaran', dashboardData['pengeluaran'], Colors.blue, Icons.receipt_long),
-      StatItem('Piutang Pelanggan', dashboardData['piutangPelanggan'], Colors.teal, Icons.account_circle),
-      StatItem('Pendapatan Bersih', dashboardData['pendapatanBersih'], Colors.orange, Icons.monetization_on),
-      StatItem('Transaksi', dashboardData['transaksi'], Colors.grey, Icons.receipt, isNumber: true),
-      StatItem('Pembatalan', dashboardData['pembatalan'], Colors.red, Icons.cancel, isNumber: true),
-      StatItem('Pelanggan Baru', dashboardData['pelangganBaru'], Colors.blue, Icons.person_add, isNumber: true),
+      StatItem(
+        'Omset',
+        dashboardData['omset'],
+        Colors.orange,
+        Icons.trending_up,
+      ),
+      StatItem(
+        'Uang Masuk',
+        dashboardData['uangMasuk'],
+        Colors.brown,
+        Icons.account_balance_wallet,
+      ),
+      StatItem(
+        'Pengeluaran',
+        dashboardData['pengeluaran'],
+        Colors.blue,
+        Icons.receipt_long,
+      ),
+      StatItem(
+        'Piutang Pelanggan',
+        dashboardData['piutangPelanggan'],
+        Colors.teal,
+        Icons.account_circle,
+      ),
+      StatItem(
+        'Pendapatan Bersih',
+        dashboardData['pendapatanBersih'],
+        Colors.orange,
+        Icons.monetization_on,
+      ),
+      StatItem(
+        'Transaksi',
+        dashboardData['transaksi'],
+        Colors.grey,
+        Icons.receipt,
+        isNumber: true,
+      ),
+      StatItem(
+        'Pembatalan',
+        dashboardData['pembatalan'],
+        Colors.red,
+        Icons.cancel,
+        isNumber: true,
+      ),
+      StatItem(
+        'Pelanggan Baru',
+        dashboardData['pelangganBaru'],
+        Colors.blue,
+        Icons.person_add,
+        isNumber: true,
+      ),
     ];
 
     return LayoutBuilder(
@@ -566,8 +812,8 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
   }
 
   Widget _buildStatCard(StatItem item) {
-    String formattedValue = item.isNumber 
-        ? item.value.toString() 
+    String formattedValue = item.isNumber
+        ? item.value.toString()
         : _formatCurrency(item.value);
 
     return Container(
@@ -589,8 +835,12 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
           Row(
             children: [
               Container(
-                width: 8, height: 8,
-                decoration: BoxDecoration(color: item.color, shape: BoxShape.circle),
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: item.color,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 8),
               Icon(item.icon, size: 16, color: item.color),
@@ -607,9 +857,17 @@ class _DashboardContentPageState extends State<DashboardContentPage> {
               ),
               if (!item.isNumber)
                 Container(
-                  width: 12, height: 12,
-                  decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
-                  child: const Icon(Icons.help_outline, size: 8, color: Colors.white),
+                  width: 12,
+                  height: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.help_outline,
+                    size: 8,
+                    color: Colors.white,
+                  ),
                 ),
             ],
           ),
@@ -642,5 +900,11 @@ class StatItem {
   final IconData icon;
   final bool isNumber;
 
-  StatItem(this.title, this.value, this.color, this.icon, {this.isNumber = false});
+  StatItem(
+    this.title,
+    this.value,
+    this.color,
+    this.icon, {
+    this.isNumber = false,
+  });
 }

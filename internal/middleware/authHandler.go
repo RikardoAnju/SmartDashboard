@@ -23,7 +23,7 @@ import (
 
 var jwtSecret = []byte(config.JWT_SIGNATURE_KEY)
 
-// Claims structure for JWT Access Token
+// Claims structure for JWT Access Toke
 type AccessClaims struct {
 	UserID string `json:"user_id"`
 	// Role string `json:"role"`
@@ -36,8 +36,8 @@ func GenerateAccessToken(userID string) (string, error) {
 		UserID: userID,
 		// Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(config.AccessTokenExpiry)), // Expiry time
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                    // Issued at
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(config.AccessTokenExpiry)), 
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                    
 			Issuer:"BackendFramework UIB",
 		},
 	}

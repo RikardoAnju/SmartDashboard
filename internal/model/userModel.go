@@ -2,39 +2,41 @@ package model
 
 import (
 	"time"
+
 	"gorm.io/gorm"
 )
 
-
+// Struktur untuk menampilkan daftar user (list response)
 type UserList struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Group    string `json:"group"`
 	IsAktif  string `json:"isAktif"`
+	Address  string `json:"address"` 
 	Password string `json:"password,omitempty"`
 }
 
-
-
-
+// Struktur untuk input user (misal tambah user via API Admin)
 type UserInput struct {
-	Username    string `json:"username" validate:"required,min=3"`
-	FirstName   string `json:"firstName" validate:"required"`
-	LastName    string `json:"lastName" validate:"required"`
-	Email       string `json:"email" validate:"required,email"`
-	Phone       string `json:"phone" validate:"required,min=10"`
-	Password    string `json:"password" validate:"required,min=8"`
-	Group       int    `json:"group" validate:"required"`
-	IsAktif     string `json:"isAktif,omitempty"` 
+	Username string `json:"username" validate:"required,min=3"`
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Phone     string `json:"phone" validate:"required,min=10"`
+	Password  string `json:"password" validate:"required,min=8"`
+	Address   string `json:"address" validate:"required,min=8"`
+	Group     int    `json:"group" validate:"required"`
+	IsAktif   string `json:"isAktif,omitempty"`
 }
 
-
+// Struktur untuk input register dari user
 type RegisterInput struct {
 	Username            string `json:"username" validate:"required,min=3"`
 	FirstName           string `json:"firstName" validate:"required"`
 	LastName            string `json:"lastName" validate:"required"`
 	Email               string `json:"email" validate:"required,email"`
 	Phone               string `json:"phone" validate:"required,min=10"`
+	Address             string `json:"address" validate:"required,min=7"`
 	Password            string `json:"password" validate:"required,min=8"`
 	ConfirmPassword     string `json:"confirmPassword" validate:"required"`
 	Group               int    `json:"group" validate:"required"`
@@ -42,7 +44,7 @@ type RegisterInput struct {
 	SubscribeNewsletter bool   `json:"subscribeNewsletter"`
 }
 
-// Di file model/user.go
+
 type User struct {
 	ID                  uint           `json:"id" gorm:"primaryKey"`
 	Username            string         `json:"username" gorm:"uniqueIndex;not null;size:100"`
@@ -55,28 +57,30 @@ type User struct {
 	IsAktif             string         `json:"isAktif" gorm:"size:20;default:'active'"`
 	AgreeTerms          bool           `json:"agreeTerms" gorm:"default:false"`
 	SubscribeNewsletter bool           `json:"subscribeNewsletter" gorm:"default:false"`
+	Address             string         `json:"address" gorm:"type:text"` 
 	CreatedAt           time.Time      `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt           time.Time      `json:"updatedAt" gorm:"autoUpdateTime"`
 	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 func (User) TableName() string {
-	return "users" 
+	return "users"
 }
 
-
+// Struktur untuk upload file
 type FileInput struct {
-	FileUpload      string `json:"fileupload" validate:"required"`    
+	FileUpload      string `json:"fileupload" validate:"required"`
 	FileDescription string `json:"filedescription" validate:"required"`
 }
 
-// Response structures for API responses
+// Response sukses untuk register
 type RegisterResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	User    *User  `json:"user,omitempty"`
 }
 
+// Response error standar
 type ErrorResponse struct {
 	Success bool   `json:"success"`
 	Error   string `json:"error"`
